@@ -22,7 +22,6 @@ const CalenderHeader = ({bsMonth, bsYear, changeMonth})=>{
     }
   },[bsMonth, bsYear])
 
-console.log(bsMonth, bsYear)
   const getMonthYearText = () => {
     var monthName = calendarData.bsMonths[bsMonth - 1]
     var year = calendarFunctions.getNepaliNumber(bsYear)
@@ -30,7 +29,7 @@ console.log(bsMonth, bsYear)
   }
 
   return (
-    <View  style={{flexDirection: 'row', height: 40,width: 350, alignContent:'flex-start', justifyContent:'space-around', marginTop:40,marginBottom:10}}>
+    <View  style={{ flexDirection: 'row', height: 40,width: 350, alignContent:'flex-start', justifyContent:'space-around', marginTop:25,marginBottom:10}}>
       <Button title='&#x25C0;' onPress={() => changeMonth('prev')}  disabled={disableMin} />
       <Text style={{alignSelf:'center', fontSize:20, fontWeight:'bold'}}>{monthYearText}</Text>
       <Button title='&#x25B6;' onPress={() => changeMonth('next')}  disabled={disableMax} />

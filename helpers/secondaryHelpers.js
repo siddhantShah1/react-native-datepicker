@@ -335,7 +335,7 @@ export const calendarFunctions = {
     validationFunctions.validateBsYear(bsYear)
     validationFunctions.validateBsMonth(bsMonth)
     validationFunctions.validateBsDate(bsDate)
-    if (dateFormatPattern === null) {
+    if (dateFormatPattern === null || dateFormatPattern === undefined) {
       dateFormatPattern = '%D, %M %d, %y'
     } else if (typeof dateFormatPattern !== 'string') {
       throw new TypeError('Invalid parameter dateFormatPattern value')
@@ -415,6 +415,7 @@ export const calendarFunctions = {
       bsMonth: bsMonth,
       bsDate: bsDate
     })
+    
     validationFunctions.validateBsYear(bsYear)
     validationFunctions.validateBsMonth(bsMonth)
     validationFunctions.validateBsDate(bsDate)

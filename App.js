@@ -1,11 +1,17 @@
 import React,{useState, useEffect } from 'react';
-import { StyleSheet, View, Text, Modal, TouchableOpacity, Button, TextInput, ScrollView, ToastAndroid } from 'react-native';
 import {Picker} from '@react-native-picker/picker';
 import CalenderHeader from './components/calendarHeader'
 import CalendarWeek from './components/calendarWeek'
 import CalendarDates from './components/calendarDates'
 import {calendarData} from './helpers/CalenderData'
 import { calendarFunctions } from './helpers/secondaryHelpers'
+import PropTypes from 'prop-types'
+
+import { 
+  View, Text, 
+  Modal, TouchableOpacity, TextInput, Button,
+  ScrollView, ToastAndroid, useWindowDimensions,
+  Pressable} from 'react-native';
 
 import {
   _getCalendarInitialDetails,
@@ -13,14 +19,13 @@ import {
   _renderPreviousMonthCalendar
 } from './helpers'
 
-
 const DatePicker = ({
   dateFormat,
   onDateChange,
-  placeholderText,
   selectedDefaultDate,
   fromDate, 
-  toDate
+  toDate,
+  edit
 }) => {
 
   const [calendarDetails, setCalendarDetails] = useState({
@@ -33,12 +38,14 @@ const DatePicker = ({
     bsMonthFirstAdDate: undefined,
     bsMonthDays: undefined
     })
-  
-    const [selectedDate, setSelectedDate] = useState('')
-    const [visible, setVisible] = useState(false)
     
-    const [colourDate, setColourDate] = useState('grey')
-    const [colourYear, setColourYear] = useState('grey')
+    const window = useWindowDimensions();
+    const [editor] = useState(edit || false);
+
+    const [selectedDate, setSelectedDate] = useState('')
+
+    const [visible, setVisible] = useState(false)
+    const [editModal, setEditModal] = useState(false)
 
     const [year, setYear] = useState('');
     const [month, setMonth] = useState(0);
@@ -46,17 +53,53 @@ const DatePicker = ({
 
     const [selectedDayMonth, setSelectedDay] = useState({
       day: -1,
-      month: -1
+      month: -1,
+      year: -1
     })
 
-    const dateFormatted = '%D, %M %d, %y'
+    const [errorCss, setErrorCss] = useState({
+      colourDate:'grey',
+      colourYear:'grey'
+    })
+
+    const [displayDate, setDisplayDate] = useState({
+      disDay:'',
+      disDate:'',
+      disMonth:'',
+      disYear:''
+    })
+
+    
+
+    const dateFormatted = '%y-%m-%d'
     const { bsMonth, bsYear, bsDate } = calendarDetails
   
     useEffect(() => {
       const details = _getCalendarInitialDetails(0, dateFormatted)
+
       setCalendarDetails(details)
       setSelectedDate(details.formattedDate)
     }, [])
+
+    useEffect(()=>{
+      if(!!selectedDate){
+        const updDisplayDate = selectedDate
+        .split('-')
+        .map((n)=>calendarFunctions.getNumberByNepaliNumber(n))
+        
+        let objDate = calendarFunctions.getBsMonthInfoByBsDate(
+          parseInt(updDisplayDate[0]),parseInt(updDisplayDate[1]), parseInt(updDisplayDate[2]), '%D,%M,%d,%y'
+        )
+        let tempDate = objDate.formattedDate.split(',')
+        setDisplayDate({
+          disDay: tempDate[0],
+          disDate:tempDate[2],
+          disMonth:tempDate[1],
+          disYear: tempDate[3]
+        })
+        
+      }
+    },[selectedDate])
 
     useEffect(() => {
       try {
@@ -64,166 +107,274 @@ const DatePicker = ({
           !!selectedDefaultDate &&
           calendarFunctions.isValidDate(selectedDefaultDate)
         ) {
-          const updatedNepaliDate = selectedDefaultDate
+            const updatedNepaliDate = selectedDefaultDate
             .split('-')
             .map((n) => calendarFunctions.getNepaliNumber(n))
             .join('-')
           setSelectedDate(updatedNepaliDate)
-        }
-      } catch (e) {}
-    }, [selectedDefaultDate])
 
-    const changeMonth = (type) => {
-      let details = calendarDetails
-      if (type === 'next') {
-        details = _renderNextMonthCalendar(bsMonth, bsYear, bsDate, dateFormatted)
-      }
-      if (type === 'prev') {
-        details = _renderPreviousMonthCalendar(
-          bsMonth,
-          bsYear,
-          bsDate,
-          dateFormatted
-        )
-      }
-      setCalendarDetails(details)
+          let splitDefault = selectedDefaultDate.split('-') 
+          let defaultObj = calendarFunctions.getBsMonthInfoByBsDate(
+            parseInt(splitDefault[0]), 
+            parseInt(splitDefault[1]), 
+            parseInt(splitDefault[2]), 
+            dateFormatted)
+            setSelectedDay({
+              day: parseInt(splitDefault[2]),
+              month: parseInt(splitDefault[1]),
+              year: parseInt(splitDefault[0])
+            })
+          setCalendarDetails(defaultObj)
+
+          try {
+            const objDate = calendarFunctions.getBsMonthInfoByBsDate(
+              parseInt(splitDefault[0]), 
+              parseInt(splitDefault[1]), 
+              parseInt(splitDefault[2]), 
+              dateFormat)
+            onDateChange(objDate)
+          } catch (error) {}
+
+            return
+          }
+
+          if(!!fromDate && calendarFunctions.isValidDate(fromDate)){
+            const updatedNepaliDate = fromDate
+            .split('-')
+            .map((n) => calendarFunctions.getNepaliNumber(n))
+            .join('-')
+          setSelectedDate(updatedNepaliDate)
+
+
+          let splitDefault = fromDate.split('-')
+
+          let defaultObj = calendarFunctions.getBsMonthInfoByBsDate(
+            parseInt(splitDefault[0]), 
+            parseInt(splitDefault[1]), 
+            parseInt(splitDefault[2]), 
+            dateFormatted)
+
+            setSelectedDay({
+              day: parseInt(splitDefault[2]),
+              month: parseInt(splitDefault[1]),
+              year: parseInt(splitDefault[0])
+            })
+          setCalendarDetails(defaultObj)
+
+          try {
+            const objDate = calendarFunctions.getBsMonthInfoByBsDate(
+              parseInt(splitDefault[0]), 
+              parseInt(splitDefault[1]), 
+              parseInt(splitDefault[2]), 
+              dateFormat)
+            onDateChange(objDate)
+          } catch (error) {}
+            return
+          }
+        }
+       catch (e) {}
+    }, [selectedDefaultDate, fromDate])
+
+  const changeMonth = (type) => {
+    let details = calendarDetails
+    if (type === 'next') {
+      details = _renderNextMonthCalendar(bsMonth, bsYear, bsDate, dateFormatted)
     }
-    
-    const onDateClick = (day) => {
-      const selectedDateDetails = calendarFunctions.getBsMonthInfoByBsDate(
+    if (type === 'prev') {
+      details = _renderPreviousMonthCalendar(
+        bsMonth,
+        bsYear,
+        bsDate,
+        dateFormatted
+      )
+    }
+    setCalendarDetails(details)
+  }
+  
+  const onDateClick = (day) => {
+    const selectedDateDetails = calendarFunctions.getBsMonthInfoByBsDate(
+      bsYear,
+      bsMonth,
+      day,
+      dateFormatted
+    )
+    setSelectedDate(selectedDateDetails.formattedDate)
+      
+    try {
+      const objDate = calendarFunctions.getBsMonthInfoByBsDate(
         bsYear,
         bsMonth,
         day,
-        dateFormatted
+        dateFormat
       )
-      setSelectedDate(selectedDateDetails.formattedDate)
-      //setVisible(false)
-      setSelectedDay({
-        day: day,
-        month: bsMonth
+      onDateChange(objDate)
+    } catch (error) {}
+
+    setVisible(false)
+    setSelectedDay({
+      day: day,
+      month: bsMonth,
+      year: bsYear
+    })
+  } 
+
+  const handleSubmit =() =>{
+    if(year.length < 4){
+      setErrorCss({
+        colourYear:'red',
+        colourDate:'grey'
       })
-    } 
+      showToast('Invalid Year')
+      return
+    }
 
-    const handleSubmit =() =>{
-      
-      if(inpdate.length < 1 || parseInt(inpdate) > 32){
-        setColourDate('red')
-        showToast('Invalid Date')
-      }
-      if(year.length < 4){
-        setColourYear('red')
-        showToast('Invalid Year')
-      }
+    if(inpdate.length < 1 || parseInt(inpdate) > 32 || parseInt(inpdate) <1){
+      setErrorCss({
+        colourDate:'red',
+        colourYear:'grey'
+      })
+      showToast('Invalid Date')
+      return
+    }
 
-      if(year.length === 4){
-        if(parseInt(year) >= calendarData.minBsYear && parseInt(year) <= calendarData.maxBsYear && parseInt(inpdate) > 0 && parseInt(inpdate) < 33){
-          let tempDate = inpdate === '' ? 1 : parseInt(inpdate) 
+    if(year.length === 4){
+      if(parseInt(year) >= calendarData.minBsYear && parseInt(year) <= calendarData.maxBsYear && parseInt(inpdate) > 0 && parseInt(inpdate) < 33){
+        setErrorCss({
+          colourYear:'grey',
+          colourDate:'grey'
+        })
+        let tempDate = inpdate === '' ? 1 : parseInt(inpdate) 
         let temp = calendarFunctions.getBsMonthInfoByBsDate(
-          parseInt(year), 
-          parseInt(month)+1, 
-          parseInt(tempDate), 
-          dateFormatted)
+        parseInt(year), 
+        parseInt(month)+1, 
+        parseInt(tempDate), 
+        dateFormatted)
 
-          setSelectedDay({
-            day: tempDate,
-            month: parseInt(month)+1
-          })
-       setCalendarDetails(temp)
-       handleReset()
-       setSelectedDate(temp.formattedDate)
-        }
-        else{
-          setColourYear('red')
-          showToast('Limit Exceeded')
-        }
+        setSelectedDay({
+          day: tempDate,
+          month: parseInt(month)+1,
+          year: parseInt(year)
+        })
+        setCalendarDetails(temp)
+        setSelectedDate(temp.formattedDate)
+        try {
+          const objDate = calendarFunctions.getBsMonthInfoByBsDate(
+            parseInt(year), 
+            parseInt(month)+1, 
+            parseInt(tempDate), 
+            dateFormat
+          )
+          onDateChange(objDate)
+        } catch (error) {}
+
+        setEditModal(false)
+      }
+
+      else{
+        setErrorCss({colourYear:'red', colourDate:'red'})
+        showToast('Invalid Input')
+        return
       }
     }
-    const showToast = (message) => {
-      ToastAndroid.show(message, ToastAndroid.SHORT, ToastAndroid.BOTTOM);
-    };
+  }
 
-    const handleReset =(e)=>{
-      setYear('')
-      setInpDate('')
-      setMonth(0)
-      setColourDate('grey')
-      setColourYear('grey')
-      if(e){
-        const details = _getCalendarInitialDetails(0, dateFormatted)
-        setCalendarDetails(details)
-        setSelectedDate(details.formattedDate)
-        setSelectedDay({day: -1,
-          month: -1})
-      }
-    }
-    
-    const selectedDay =
-    selectedDayMonth.month === calendarDetails.bsMonth
-      ? selectedDayMonth.day
-      : undefined
+  const showToast = (message) => {
+    ToastAndroid.show(message, ToastAndroid.SHORT, ToastAndroid.BOTTOM);
+  };
+
+  const selectedDay =
+  selectedDayMonth.month === calendarDetails.bsMonth && selectedDayMonth.year === calendarDetails.bsYear
+    ? selectedDayMonth.day
+    : undefined
 
   return bsYear == 0 ? (<></>) : (
-    <View style={styles.container}>
-      <View>
-      <TouchableOpacity 
-        onPress={()=>setVisible(!visible)}
-        style={{width:'200%',alignItems:'center'}}>
-        <Text
-          readOnly={true}  
-          style={{ borderColor: 'red', borderWidth: 2, color:'black', width:200, alignContent:'center'}}
-        >{selectedDate}</Text>
+    <>
+    <View>
+      
+        <TouchableOpacity style={{borderBottomColor:'grey',borderBottomWidth:1, width:window.width*0.2}} onPress={()=>setVisible(!visible)}>
+          <Text 
+            readOnly={true}  
+            style={{color:'black', alignSelf:'center'}}
+          >{selectedDate}</Text>
         </TouchableOpacity>
         
-        <Modal
-          visible={visible}
-          transparent={false}
-          animationType='fade'        
-          onRequestClose={() => {
-            setVisible(!visible);
-          }}
-        >
-        <ScrollView>
-          <View>
-          <View style={{flex:0.15,flexDirection: 'row', justifyContent:'flex-start'}}>
-          <Button title='X' color='red' onPress={()=> setVisible(false)}/>
-          </View>
+      {visible?
+        
+          <Modal
+            visible={visible}
+            transparent={true}
+            animationType='fade'
+            onRequestClose={() => {
+              setVisible(!visible)}}>
 
-          <View style={{flex:1, borderBottomWidth :2, borderBottomColor: 'grey'}}>
-            <Text style={{color: 'black', alignSelf:'center',fontWeight:'bold', marginTop:30, marginBottom: 40}}>{selectedDate}</Text>
-          <View style={{flexDirection: 'row', justifyContent:'space-around'}}>
-            <TextInput placeholder=' Enter Date...' 
-              value={inpdate} 
+            <Pressable onPress={()=>{setVisible(!visible)}} style={{width:window.width, height:window.height, backgroundColor:'rgba(0, 0, 0, .8)', justifyContent:'center'}}>
+            {editModal ? 
+            <View style={{position:'relative',bottom:20,elevation:10, alignSelf:'center' }}>
+            <Pressable onPress={f=>f}> 
+            <View style={{flexDirection:'column',width:window.width*0.9,height:window.height*0.15,borderColor:'#2196F3',borderRadius:20, borderWidth:2, backgroundColor:'white', justifyContent:'center', alignSelf:'center'}}>
+               <View style={{flexDirection:'row',justifyContent:'space-around', marginBottom:5}}>
+               <TextInput placeholder=' Enter Year...' 
+                   value={year} 
+                   textAlign='center' 
+                   onChangeText={year=>setYear(year)} 
+                   maxLength={4} 
+                   keyboardType='number-pad'
+                   underlineColorAndroid={errorCss.colourYear}
+                   style={{width: 100,fontWeight:'bold', color:`${errorCss.colourYear}`}}/>
+                 
+                 <Picker
+                   selectedValue={month}
+                   mode={'dropdown'}
+                   style={{ width: 120,fontWeight:'bold', textAlign:'center' }}
+                   onValueChange={(itemIndex) => setMonth(itemIndex)}>
+                   {calendarData.bsMonths.map((month, index)=>{
+                     return(
+                       <Picker.Item label={month} value={index} key={month} />
+                     )
+                   })}
+                 </Picker>
+                 <TextInput placeholder=' Enter Date...' 
+                   value={inpdate} 
+                   textAlign='center' 
+                   onChangeText={inpdate=>setInpDate(inpdate)} 
+                   maxLength={2} keyboardType='number-pad'
+                   underlineColorAndroid={errorCss.colourDate}
+                   style={{width: 100,fontWeight:'bold', color:`${errorCss.colourDate}`}}/>
+               </View>
+               <View style={{alignItems:'center'}}>
+               <TouchableOpacity style={{borderColor:'#2196F3',backgroundColor:'#2196F3',width:'30%',borderRadius:20, alignItems:'center',justifyContent:'center', borderWidth:2}} onPress={handleSubmit}><Text style={{color:'white'}}>OK</Text></TouchableOpacity>
+               </View>
+              </View>
+              </Pressable>
+              </View>
+              :
+              <></>
+              }
               
-              textAlign='center' 
-              onChangeText={inpdate=>setInpDate(inpdate)} 
-              maxLength={2} keyboardType='number-pad' underlineColorAndroid={colourDate}
-              style={{width: 100, color:`${colourDate}`}}/>
-            <Picker
-              selectedValue={month}
-              style={{ width: 120 }}
-              onValueChange={(itemIndex) => setMonth(itemIndex)}
-            >
-            {calendarData.bsMonths.map((month, index)=>{
-              return(
-                <Picker.Item label={month} value={index} key={month} />
-              )
-            })}
-            </Picker>
-            <TextInput placeholder=' Enter Year...' 
-              value={year} 
-              textAlign='center' 
-              onChangeText={year=>setYear(year)} 
-              maxLength={4} 
-              keyboardType='number-pad' underlineColorAndroid={colourYear}
-              style={{width: 100, color:`${colourYear}`}}/>
-          </View>
-            <View  style={{flexDirection:'row', justifyContent:'space-around', marginTop:30, marginBottom:10}}>
-            <Button title='Search ' onPress={handleSubmit}/>
-            <Button title='Reset' onPress={handleReset}/>
-            </View>
-          </View>
-          
-          <View style={{flex:2, alignItems:'center'}}>
+            <View style={{width:window.width *0.9, 
+              height: window.height*0.58 , alignSelf:'center',
+              borderColor:'#2196F3',borderRadius:20, borderWidth:2, 
+              backgroundColor:'white', 
+              elevation:10
+              }}>
+              <Pressable onPress={f=>f}>         
+              <ScrollView>
+              <View style={{flex:1,flexDirection:'column', margin:15, borderBottomWidth:2, alignItems:'center'}}>
+                  <Text style={{fontSize:20, fontWeight:'bold'}}>{displayDate.disYear}</Text>
+                <View style={{ flexDirection:'row'}}>
+                  <Text style={{fontSize:30, fontWeight:'bold'}}>{displayDate.disDay}, </Text>
+                  <Text style={{fontSize:30, fontWeight:'bold'}}>{displayDate.disMonth} </Text>
+                  <Text style={{fontSize:30, fontWeight:'bold'}}>{displayDate.disDate}</Text>
+                </View>
+              </View> 
+              {editor ? 
+              <View style={{alignItems:'center'}}>
+                <TouchableOpacity style={{backgroundColor:`${editModal?'red':'#2196F3'}`, padding:7, elevation:7}} onPress={()=>setEditModal(!editModal)}><Text style={{fontWeight:'bold', color:'white'}}>{editModal? 'Close':'Edit'} </Text></TouchableOpacity>
+              </View>             
+              :
+              <></>
+            }                        
+        <View style={{flex:1, alignItems:'center'}}>
           <CalenderHeader {...{ bsMonth, bsYear, changeMonth }}/>
           <CalendarWeek />
           <CalendarDates {...{
@@ -232,27 +383,28 @@ const DatePicker = ({
                     selectedDay,
                     fromDate,
                     toDate
-                  }}/>
-        </View>
-        </View>
-        <View style={{marginTop: 20, width:100, alignSelf:'center'}}>          
-          <Button title='OK' onPress={()=> setVisible(false)}/>
-        </View>
-        </ScrollView>
+                    }}/>
+            </View>
+            </ScrollView>
+            </Pressable>
+          </View>
+          </Pressable>
         </Modal>
-      </View>
-    </View>
+      :
+    <></>}
+  </View>
+    </>
   );
+}
+
+DatePicker.prototype={
+  dateFormat: PropTypes.string,
+  onDateChange : PropTypes.func,
+  selectedDefaultDate: PropTypes.string,
+  fromDate: PropTypes.string,
+  toDate: PropTypes.string,
+  edit: PropTypes.bool
 }
 
 export default DatePicker
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: 'column',
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

@@ -1,10 +1,10 @@
-import React, {useState, useEffect, useRef} from 'react'
-import {View, TouchableOpacity, Text, StyleSheet, Animated} from 'react-native'
+import React, {useState, useEffect} from 'react'
+import {View, TouchableOpacity, Text, StyleSheet} from 'react-native'
 import { _getCalendarBody, _getCalendarInitialDetails } from '../helpers/index'
 import { calendarFunctions } from '../helpers/secondaryHelpers'
 import { calendarData } from '../helpers/CalenderData'
 
-const CalendarWeek = ({
+const CalendarDates = ({
   calendarDetails,
   onDateClick,
   selectedDay,
@@ -17,14 +17,17 @@ const CalendarWeek = ({
     rawDates: []
   })
 
-  const dateFormatted = '%D, %M %d, %y'
+  const dateFormatted = '%D,%M,%d,%y'
   const [curMonth, setCurMonth] = useState();
+  const [curDate, setCurDate] = useState();
+  const [curYear, setCurYear] = useState();
 
   useEffect(()=>{
     const {formattedDate } = _getCalendarInitialDetails(0,dateFormatted)
      const arr = formattedDate.split(',')
-     const tempMonth = arr[1].split(' ')
-     setCurMonth(tempMonth)
+     setCurMonth(arr[1])
+     setCurDate(arr[2])
+     setCurYear(arr[3])
   },[])
 
   useEffect(() => {
@@ -33,6 +36,7 @@ const CalendarWeek = ({
   }, [calendarDetails])
 
   const { bsYear, bsMonth, bsDate } = calendarDetails
+
   const currentDay = calendarFunctions.getNepaliNumber(bsDate)
   const { current, rawDates } = dateLists
   const startFromDay = rawDates.filter((f) => f < 1).length + 1
@@ -42,25 +46,6 @@ const CalendarWeek = ({
       current.unshift('b')
     }
   }
-  
-
-  // const [fadeAnim] = useState(new Animated.Value(0))
-
-  // useEffect(() => {
-  //   Animated.timing(
-  //     fadeAnim,
-  //     {
-  //       toValue: 1,
-  //       duration: 3000,
-  //       useNativeDriver: true,
-  //     }
-  //   ).start(fadeAnim.resetAnimation());
-  // })
-//  <Animated.View
-//     style={{
-//       opacity: fadeAnim
-//     }}
-//     >
 
 return (
     <View style={{        
@@ -69,29 +54,27 @@ return (
       height:200, 
       flexWrap: 'wrap'
     }}>
-
+      
       {current.map((day, index) => {
 
         let temp = new Date()
         let customCurrentDay = null;
+        let tempYear = calendarDetails.formattedDate.split('-')
 
-
-        if(curMonth[2] === day && calendarData.bsMonths.indexOf(curMonth[1]) === (bsMonth -1)){
-           customCurrentDay = day === currentDay ? `currentday` : ''
-          //  const ind = true;
+        if(curDate === day && calendarData.bsMonths.indexOf(curMonth) === (bsMonth -1) && tempYear[0] === curYear){
+           customCurrentDay = day === curDate ? `currentday` : ''
         }
+        const ind = startFromDay - 1;
         const selectedButton =
           !!selectedDay && selectedDay === (index - (startFromDay - 1)) + 1 ? true : false
-
-        // const isDisabled = checkIfDateIsDisable(
-        //   bsYear,
-        //   bsMonth,
-        //   index + 1,
-        //   fromDate,
-        //   toDate
-        // )
-        // const disbledClass = isDisabled ? styles.disabled : ''
-
+          
+        const isDisabled = checkIfDateIsDisable(
+          bsYear,
+          bsMonth,
+          index-ind + 1,
+          fromDate,
+          toDate
+        )
         const invis = day === 'b' ? '' : day
         const bool = day === 'b' ? true : false
 
@@ -110,6 +93,7 @@ return (
           style={stylesInline.current}
           key={`${day}-${index}`}
           onPress={bool ? f=>f : () => onDateClick((index - (startFromDay - 1)) + 1)}
+          disabled={isDisabled}
           >
           <Text style={{textAlign: 'center', alignItems:'center', color:'#2196F3'}}>{invis}</Text>
         </TouchableOpacity> : 
@@ -118,7 +102,7 @@ return (
           <TouchableOpacity
           style={stylesInline.item}
           key={`${day}-${index}`}
-          onPress={bool ? f=>f : () => onDateClick((index - (startFromDay - 1)) + 1)}>
+          onPress={bool ? f=>f : () => onDateClick((index - (startFromDay - 1)) + 1)} disabled={isDisabled}>
           <Text style={{textAlign: 'center', alignItems:'center', fontWeight:'bold', 
           color:`red`, borderColor: `red`, borderWidth:2, borderRadius:15
           }}>{invis}</Text>
@@ -128,14 +112,13 @@ return (
           <TouchableOpacity
           style={stylesInline.item}
           key={`${day}-${index}`}
-          onPress={bool ? f=>f : () => onDateClick((index - (startFromDay - 1)) + 1)}>
-          <Text style={{textAlign: 'center', alignItems:'center'}}>{invis}</Text>
+          onPress={bool ? f=>f : () => onDateClick((index - (startFromDay - 1)) + 1)} disabled={isDisabled}>
+          <Text style={{textAlign: 'center', alignItems:'center', color:`${isDisabled ? 'lightgrey':'black'}`}}>{invis}</Text>
         </TouchableOpacity>}     
       </View>)
       })}
       
     </View>
-    // </Animated.View>
     )
 
   }
@@ -176,7 +159,7 @@ const checkIfDateIsDisable = (
 const diffDate = (end_date, start_date) =>
   parseInt(end_date.replace(/-/g, '')) - parseInt(start_date.replace(/-/g, ''))
 
-export default CalendarWeek
+export default CalendarDates
 
 const stylesInline = StyleSheet.create({
   container:{
